@@ -245,9 +245,13 @@ fi
 # Disable VaultKeeper support
 # Before: [tbnz w8, #0, #0xXXXXXX]
 # After: [b #0xXXXXXX]
-LOG "- Patching \"28f7773948050037\" to \"28f777392a000014\" in apex_payload/lib64/libbluetooth_jni.so"
-HEX_PATCH "$TMP_DIR/unknown/apex_payload/lib64/libbluetooth_jni.so" \
-    "28f7773948050037" "28f777392a000014" > /dev/null
+if grep -qobUa "28f7773948050037" "$TMP_DIR/unknown/apex_payload/lib64/libbluetooth_jni.so" > /dev/null 2>&1; then
+    LOG "- Patching \"28f7773948050037\" to \"28f777392a000014\" in apex_payload/lib64/libbluetooth_jni.so"
+    HEX_PATCH "$TMP_DIR/unknown/apex_payload/lib64/libbluetooth_jni.so" \
+        "28f7773948050037" "28f777392a000014" > /dev/null
+else
+    LOG "\033[0;33m! VaultKeeper native patch not applicable: signature not found, skipping\033[0m"
+fi
 
 BUILD_APK_IN_APEX "$TMP_DIR/unknown/apex_payload/app/Bluetooth@BP2A.250605.031.A3/Bluetooth.apk"
 BUILD_APK_IN_APEX "$TMP_DIR/unknown/apex_payload/javalib/framework-bluetooth.jar"
