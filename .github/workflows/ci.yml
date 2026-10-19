@@ -356,7 +356,13 @@ jobs:
                 exit 1
               fi
             done < <(asset_names "$ZIP_NAME" "$ZIP_PARTS")
-            FIRST="$(asset_names "$ZIP_NAME" "$ZIP_PARTS" | head -n 1)"
+            # Pertama: nama file tunggal, atau bagian .00. Jangan pakai `asset_names | head -n 1`:
+            # dengan pipefail, head menutup pipa lebih dulu -> "printf: Broken pipe" -> step gagal.
+            if [ "$ZIP_PARTS" -eq 0 ]; then
+              FIRST="$ZIP_NAME"
+            else
+              FIRST="$ZIP_NAME.00"
+            fi
             {
               if [ "$ZIP_PARTS" -eq 0 ]; then
                 echo "- \`$ZIP_NAME\` (single file, incremental=$ZIP_INC)"
