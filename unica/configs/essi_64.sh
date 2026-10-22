@@ -17,7 +17,7 @@
 
 # ParadoxUI configuration file for Snapdragon devices (qssi)
 
-# Galaxy S26  (One UI 9.0)
+# Galaxy S26+  (One UI 9.0)
 SOURCE_CODENAME="m2s"
 SOURCE_FIRMWARE="SM-S947B/ACR/R5GYC4S8GWT"
 SOURCE_FIRMWARE_VERSION="S947BXXS4BZIG/S947BOXM4BZIG/S947BXXS4BZIG"
