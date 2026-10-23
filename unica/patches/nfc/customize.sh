@@ -3,7 +3,7 @@ _LOG() { if $DEBUG; then LOGW "$1"; else ABORT "$1"; fi }
 # ]
 
 case "$TARGET_CODENAME" in
-    a23|a23xq)
+    a23)
         LOG "\033[0;33m! NFC patch skipped for $TARGET_CODENAME\033[0m"
         unset -f _LOG
         return 0
