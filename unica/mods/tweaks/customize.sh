@@ -43,23 +43,42 @@ for ENTRY in "max_shade_window_blur_radius:$SHADE_WINDOW_BLUR_PCT" \
     fi
 
     while IFS= read -r f; do
-        LOG "- Scaling \"$DIMEN_NAME\" to $DIMEN_PCT% in \"${f#"$SYSTEMUI_RES"/}\""
-        awk -v NAME="$DIMEN_NAME" -v PCT="$DIMEN_PCT" '
-            index($0, "name=\"" NAME "\"") && match($0, />-?[0-9]*\.?[0-9]+/) {
-                val = substr($0, RSTART + 1, RLENGTH - 1) + 0
-                sub(/>-?[0-9]*\.?[0-9]+/, sprintf(">%.1f", val * PCT / 100))
+        DIMEN_FILE="${f#"$SYSTEMUI_RES"/}"
+
+        # Current value of the dimen in this file, e.g. "120.0dip" or "@dimen/other"
+        DIMEN_ORIG="$(grep -hoE "name=\"$DIMEN_NAME\">[^<]*<" "$f" 2> /dev/null | head -n 1 \
+            | sed -e 's/^[^>]*>//' -e 's/<$//' || true)"
+        DIMEN_VALUE="$DIMEN_ORIG"
+
+        # Follow references (@dimen/...) down to a plain number, so a dimen that only
+        # points to another one gets its own scaled value without touching the target
+        DIMEN_DEPTH=0
+        while [[ "$DIMEN_VALUE" == "@dimen/"* ]] && [ "$DIMEN_DEPTH" -lt 5 ]; do
+            DIMEN_REF="${DIMEN_VALUE#@dimen/}"
+            DIMEN_VALUE="$(find "$SYSTEMUI_RES" -path "*/values/*.xml" ! -name "public.xml" \
+                -exec grep -hoE "name=\"$DIMEN_REF\">[^<]*<" {} + 2> /dev/null | head -n 1 \
+                | sed -e 's/^[^>]*>//' -e 's/<$//' || true)"
+            DIMEN_DEPTH=$((DIMEN_DEPTH + 1))
+        done
+
+        if [[ ! "$DIMEN_VALUE" =~ ^(-?[0-9]*\.?[0-9]+)([a-zA-Z]*)$ ]]; then
+            LOGW "\"$DIMEN_NAME\" in \"$DIMEN_FILE\" is \"$DIMEN_ORIG\" and cannot be resolved to a number, left untouched"
+            continue
+        fi
+
+        DIMEN_NEW="$(awk -v v="${BASH_REMATCH[1]}" -v p="$DIMEN_PCT" -v u="${BASH_REMATCH[2]}" \
+            'BEGIN { printf "%.1f%s", v * p / 100, u }')"
+
+        LOG "- Scaling \"$DIMEN_NAME\" in \"$DIMEN_FILE\": $DIMEN_ORIG -> $DIMEN_NEW ($DIMEN_PCT%)"
+        awk -v NAME="$DIMEN_NAME" -v NEW="$DIMEN_NEW" '
+            index($0, "name=\"" NAME "\"") && match($0, />[^<]*</) {
+                sub(/>[^<]*</, ">" NEW "<")
             }
             { print }
-        ' "$f" > "$f.tmp"
-
-        if cmp -s "$f" "$f.tmp"; then
-            LOGW "\"$DIMEN_NAME\" in \"${f#"$SYSTEMUI_RES"/}\" is not a plain number, left untouched"
-            rm -f "$f.tmp"
-        else
-            mv "$f.tmp" "$f"
-        fi
+        ' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
     done <<< "$DIMEN_FILES"
 done
 
-unset SHADE_WINDOW_BLUR_PCT SHADE_CONTENT_BLUR_PCT SYSTEMUI_RES ENTRY DIMEN_NAME DIMEN_PCT DIMEN_FILES
-
+unset SHADE_WINDOW_BLUR_PCT SHADE_CONTENT_BLUR_PCT SYSTEMUI_RES ENTRY DIMEN_NAME DIMEN_PCT DIMEN_FILES \
+    DIMEN_FILE DIMEN_ORIG DIMEN_VALUE DIMEN_DEPTH DIMEN_REF DIMEN_NEW
+    
