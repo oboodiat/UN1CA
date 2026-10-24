@@ -36,6 +36,8 @@ jobs:
       TF_TAG: target-files
       TF_KEEP: 3
       INC_SOURCES: 2
+      # Gambar banner untuk release notes (commit file ini ke repo; kosongkan/hapus file untuk menonaktifkan)
+      RELEASE_IMAGE: .github/release-banner.png
 
     strategy:
       fail-fast: false
